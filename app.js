@@ -1,18 +1,3 @@
-/**
- * app.js — Logic chính của Quiz App
- * ===================================
- * File này xử lý toàn bộ state, render UI, và tương tác người dùng.
- * Không cần chỉnh sửa file này khi chỉ muốn thay đổi câu hỏi.
- *
- * Lưu ý: Phần đọc file .docx KHÔNG dùng mammoth.js nữa. Mammoth khi convert
- * sang HTML sẽ làm mất thông tin màu chữ (font color), nên không thể nhận
- * diện đáp án đúng được tô màu đỏ trong Word -> mọi câu bị fallback về đáp án A.
- * Thay vào đó, ta đọc trực tiếp word/document.xml bên trong file .docx (dùng
- * JSZip) để lấy đúng giá trị màu/định dạng của từng đoạn chữ.
- *
- * Cần thêm script JSZip vào file HTML (trước app.js):
- *   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
- */
 
 // ─────────────────────────────────────────────────────
 // HỆ THỐNG ÂM THANH (Web Audio API)
@@ -102,12 +87,6 @@ function fireCuteConfetti() {
 let rawQuizData = [];
 let chapterNames = {};
 
-/**
- * Nhận object data đã parse và nạp vào app.
- * Hỗ trợ 2 định dạng:
- *   - { chapterNames: {...}, questions: [...] }
- *   - Chỉ là mảng câu hỏi: [...]
- */
 function loadQuizData(data, sourceLabel) {
     let questions, names;
     if (Array.isArray(data)) {

@@ -1,0 +1,390 @@
+openapi: 3.1.0
+info:
+  title: Multiplayer Online Quiz REST API
+  description: Backend API cho hệ thống thi trắc nghiệm trực tuyến nhiều người chơi (Vercel Functions & Supabase).
+  version: 1.0.0
+servers:
+  - url: /api/v1
+    description: Current Environment
+paths:
+  /guests:
+    post:
+      summary: Tạo khách ẩn danh (Anonymous Guest)
+      description: Tạo định danh người chơi và sinh token bí mật (chỉ trả về 1 lần duy nhất).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nickname]
+              properties:
+                nickname:
+                  type: string
+                  minLength: 2
+                  maxLength: 50
+                  example: "Gamer99"
+      responses:
+        '201':
+          description: Tạo thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessGuestResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /guests/recover:
+    post:
+      summary: Khôi phục danh tính người chơi
+      description: Nhận lại guest token mới thông qua mã khôi phục (recoveryCode).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [recoveryCode]
+              properties:
+                recoveryCode:
+                  type: string
+                  example: "4A8F9B2C1D0E3F5A"
+      responses:
+        '200':
+          description: Khôi phục thành công
+        '404':
+          description: Không tìm thấy mã khôi phục
+
+  /players/me:
+    get:
+      summary: Lấy thông tin tài khoản đang xác thực
+      security:
+        - BearerAuth: []
+        - GuestToken: []
+      responses:
+        '200':
+          description: Thông tin người chơi
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /players/me/history:
+    get:
+      summary: Lấy lịch sử thi của bản thân
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Danh sách các trận đã tham gia
+
+  /players/me/history/{attemptId}:
+    get:
+      summary: Xem chi tiết một lượt thi
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: attemptId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Chi tiết câu hỏi, lựa chọn và giải thích đáp án
+        '403':
+          description: Không có quyền xem bài thi của người khác
+
+  /rooms:
+    post:
+      summary: Tạo phòng quiz mới
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [quizId]
+              properties:
+                quizId:
+                  type: string
+                  format: uuid
+                maxPlayers:
+                  type: integer
+                  minimum: 2
+                  maximum: 100
+                  default: 20
+                timePerQuestion:
+                  type: integer
+                  minimum: 5
+                  maximum: 120
+                  default: 20
+      responses:
+        '201':
+          description: Tạo phòng thành công
+
+  /rooms/{roomCode}:
+    get:
+      summary: Lấy thông tin công khai của phòng
+      parameters:
+        - name: roomCode
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Thông tin phòng
+
+  /rooms/{roomCode}/join:
+    post:
+      summary: Tham gia vào phòng chơi
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: roomCode
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nickname:
+                  type: string
+      responses:
+        '200':
+          description: Tham gia thành công
+        '409':
+          description: Phòng đã đầy hoặc đã bắt đầu
+
+  /rooms/{roomCode}/ready:
+    post:
+      summary: Cập nhật trạng thái sẵn sàng
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: roomCode
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                isReady:
+                  type: boolean
+                  default: true
+      responses:
+        '200':
+          description: Trạng thái sẵn sàng cập nhật
+
+  /rooms/{roomCode}/start:
+    post:
+      summary: Chủ phòng bắt đầu trận đấu
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: roomCode
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Trận đấu đã bắt đầu
+        '403':
+          description: Chỉ chủ phòng mới có quyền bắt đầu
+
+  /rooms/{roomCode}/current-question:
+    get:
+      summary: Lấy câu hỏi đang diễn ra (không kèm đáp án đúng)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: roomCode
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Nội dung câu hỏi và các lựa chọn
+
+  /rooms/{roomCode}/answers:
+    post:
+      summary: Nộp câu trả lời cho câu hỏi hiện tại
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: roomCode
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: Idempotency-Key
+          in: header
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [questionId]
+              properties:
+                questionId:
+                  type: string
+                  format: uuid
+                selectedOptionId:
+                  type: string
+                  format: uuid
+                  nullable: true
+                clientTimeTakenMs:
+                  type: integer
+                  default: 0
+      responses:
+        '200':
+          description: Điểm được tính và ghi nhận
+        '410':
+          description: Quá thời hạn làm bài (Deadline exceeded)
+
+  /rooms/{roomCode}/leaderboard:
+    get:
+      summary: Lấy bảng xếp hạng điểm trong phòng
+      parameters:
+        - name: roomCode
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Danh sách người chơi kèm thứ hạng và điểm
+
+  /rooms/{roomCode}/results:
+    get:
+      summary: Lấy kết quả chung cuộc và giải thích đáp án sau khi kết thúc
+      parameters:
+        - name: roomCode
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Toàn bộ bảng xếp hạng và lời giải
+
+  /quizzes:
+    get:
+      summary: Lấy danh sách các bộ câu hỏi công khai
+      responses:
+        '200':
+          description: Danh sách Quiz
+
+  /leaderboard/global:
+    get:
+      summary: Lấy bảng xếp hạng toàn cầu
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Bảng xếp hạng toàn hệ thống
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+    GuestToken:
+      type: apiKey
+      in: header
+      name: x-guest-token
+    AdminKey:
+      type: apiKey
+      in: header
+      name: x-admin-key
+
+  schemas:
+    SuccessGuestResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            guestId:
+              type: string
+              format: uuid
+            nickname:
+              type: string
+            token:
+              type: string
+            recoveryCode:
+              type: string
+
+  responses:
+    UnauthorizedError:
+      description: Chưa xác thực hoặc token không hợp lệ
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: UNAUTHORIZED
+                  message:
+                    type: string
+    ValidationError:
+      description: Dữ liệu gửi lên không đúng định dạng
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: VALIDATION_ERROR
+                  message:
+                    type: string

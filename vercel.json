@@ -1,5 +1,8 @@
 {
   "version": 2,
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/index.js" }
+  ],
   "headers": [
     {
       "source": "/api/(.*)",
@@ -10,5 +13,13 @@
         { "key": "Access-Control-Allow-Headers", "value": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization, x-guest-token, x-admin-key, idempotency-key" }
       ]
     }
-  ]
+  ],
+  "functions": {
+    "api/index.js": {
+      "includeFiles": "backend/**"
+    },
+    "api/[...path].js": {
+      "includeFiles": "backend/**"
+    }
+  }
 }

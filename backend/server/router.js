@@ -1,114 +1,137 @@
 // backend/server/router.js
-// Bộ định tuyến phân phối request API tới đúng serverless handler
+// Bộ định tuyến phân phối request API tới đúng serverless handler (Static imports để Vercel/NFT bundle 100%)
+
+import guestsIndexHandler from '../api/v1/guests/index.js';
+import guestsRecoverHandler from '../api/v1/guests/recover.js';
+
+import playersMeHandler from '../api/v1/players/me.js';
+import playersMeHistoryHandler from '../api/v1/players/me/history.js';
+import playersMeHistoryAttemptHandler from '../api/v1/players/me/history/[attemptId].js';
+
+import quizzesIndexHandler from '../api/v1/quizzes/index.js';
+import quizDetailHandler from '../api/v1/quizzes/[quizId]/index.js';
+import quizLeaderboardHandler from '../api/v1/quizzes/[quizId]/leaderboard.js';
+
+import adminQuizzesHandler from '../api/v1/admin/quizzes.js';
+import adminStatsHandler from '../api/v1/admin/stats.js';
+import adminQuestionsImportHandler from '../api/v1/admin/questions/import.js';
+
+import roomsIndexHandler from '../api/v1/rooms/index.js';
+import roomDetailHandler from '../api/v1/rooms/[roomCode]/index.js';
+import roomJoinHandler from '../api/v1/rooms/[roomCode]/join.js';
+import roomReadyHandler from '../api/v1/rooms/[roomCode]/ready.js';
+import roomLeaveHandler from '../api/v1/rooms/[roomCode]/leave.js';
+import roomStartHandler from '../api/v1/rooms/[roomCode]/start.js';
+import roomCancelHandler from '../api/v1/rooms/[roomCode]/cancel.js';
+import roomNextQuestionHandler from '../api/v1/rooms/[roomCode]/next-question.js';
+import roomPlayersHandler from '../api/v1/rooms/[roomCode]/players.js';
+import roomStateHandler from '../api/v1/rooms/[roomCode]/state.js';
+import roomCurrentQuestionHandler from '../api/v1/rooms/[roomCode]/current-question.js';
+import roomAnswersHandler from '../api/v1/rooms/[roomCode]/answers.js';
+import roomSkipHandler from '../api/v1/rooms/[roomCode]/skip.js';
+import roomResultsHandler from '../api/v1/rooms/[roomCode]/results.js';
+import roomLeaderboardHandler from '../api/v1/rooms/[roomCode]/leaderboard.js';
+
+import leaderboardGlobalHandler from '../api/v1/leaderboard/global.js';
+import leaderboardDailyHandler from '../api/v1/leaderboard/daily.js';
+
+const roomHandlersMap = {
+  'index': roomDetailHandler,
+  'join': roomJoinHandler,
+  'ready': roomReadyHandler,
+  'leave': roomLeaveHandler,
+  'start': roomStartHandler,
+  'cancel': roomCancelHandler,
+  'next-question': roomNextQuestionHandler,
+  'players': roomPlayersHandler,
+  'state': roomStateHandler,
+  'current-question': roomCurrentQuestionHandler,
+  'answers': roomAnswersHandler,
+  'skip': roomSkipHandler,
+  'results': roomResultsHandler,
+  'leaderboard': roomLeaderboardHandler,
+};
 
 export async function routeApi(req, res, pathname) {
   try {
+    // Chuẩn hoá pathname (bỏ trailing slash nếu không phải root)
+    const normalized = pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
+
     // 1. Guests
-    if (pathname === '/api/v1/guests' || pathname === '/api/v1/guests/') {
-      const { default: handler } = await import('../api/v1/guests/index.js');
-      return await handler(req, res);
+    if (normalized === '/api/v1/guests') {
+      return await guestsIndexHandler(req, res);
     }
-    if (pathname === '/api/v1/guests/recover') {
-      const { default: handler } = await import('../api/v1/guests/recover.js');
-      return await handler(req, res);
+    if (normalized === '/api/v1/guests/recover') {
+      return await guestsRecoverHandler(req, res);
     }
 
     // 2. Players
-    if (pathname === '/api/v1/players/me') {
-      const { default: handler } = await import('../api/v1/players/me.js');
-      return await handler(req, res);
+    if (normalized === '/api/v1/players/me') {
+      return await playersMeHandler(req, res);
     }
-    if (pathname === '/api/v1/players/me/history' || pathname === '/api/v1/players/me/history/') {
-      const { default: handler } = await import('../api/v1/players/me/history.js');
-      return await handler(req, res);
+    if (normalized === '/api/v1/players/me/history') {
+      return await playersMeHistoryHandler(req, res);
     }
-    const attemptHistoryMatch = pathname.match(/^\/api\/v1\/players\/me\/history\/([^/]+)$/);
+    const attemptHistoryMatch = normalized.match(/^\/api\/v1\/players\/me\/history\/([^/]+)$/);
     if (attemptHistoryMatch) {
       req.query = req.query || {};
       req.query.attemptId = attemptHistoryMatch[1];
-      const { default: handler } = await import('../api/v1/players/me/history/[attemptId].js');
-      return await handler(req, res);
+      return await playersMeHistoryAttemptHandler(req, res);
     }
 
     // 3. Quizzes
-    if (pathname === '/api/v1/quizzes' || pathname === '/api/v1/quizzes/') {
-      const { default: handler } = await import('../api/v1/quizzes/index.js');
-      return await handler(req, res);
+    if (normalized === '/api/v1/quizzes') {
+      return await quizzesIndexHandler(req, res);
     }
-    const quizLeaderboardMatch = pathname.match(/^\/api\/v1\/quizzes\/([^/]+)\/leaderboard$/);
+    const quizLeaderboardMatch = normalized.match(/^\/api\/v1\/quizzes\/([^/]+)\/leaderboard$/);
     if (quizLeaderboardMatch) {
       req.query = req.query || {};
       req.query.quizId = quizLeaderboardMatch[1];
-      const { default: handler } = await import('../api/v1/quizzes/[quizId]/leaderboard.js');
-      return await handler(req, res);
+      return await quizLeaderboardHandler(req, res);
     }
-    const quizDetailMatch = pathname.match(/^\/api\/v1\/quizzes\/([^/]+)$/);
+    const quizDetailMatch = normalized.match(/^\/api\/v1\/quizzes\/([^/]+)$/);
     if (quizDetailMatch) {
       req.query = req.query || {};
       req.query.quizId = quizDetailMatch[1];
-      const { default: handler } = await import('../api/v1/quizzes/[quizId]/index.js');
-      return await handler(req, res);
+      return await quizDetailHandler(req, res);
     }
 
     // 4. Admin
-    if (pathname === '/api/v1/admin/quizzes' || pathname === '/api/v1/admin/quizzes/') {
-      const { default: handler } = await import('../api/v1/admin/quizzes.js');
-      return await handler(req, res);
+    if (normalized === '/api/v1/admin/quizzes') {
+      return await adminQuizzesHandler(req, res);
     }
-    if (pathname === '/api/v1/admin/stats' || pathname === '/api/v1/admin/stats/') {
-      const { default: handler } = await import('../api/v1/admin/stats.js');
-      return await handler(req, res);
+    if (normalized === '/api/v1/admin/stats') {
+      return await adminStatsHandler(req, res);
     }
-    if (pathname === '/api/v1/admin/questions/import' || pathname === '/api/v1/admin/questions/import/') {
-      const { default: handler } = await import('../api/v1/admin/questions/import.js');
-      return await handler(req, res);
+    if (normalized === '/api/v1/admin/questions/import') {
+      return await adminQuestionsImportHandler(req, res);
     }
 
     // 5. Rooms (Root)
-    if (pathname === '/api/v1/rooms' || pathname === '/api/v1/rooms/') {
-      const { default: handler } = await import('../api/v1/rooms/index.js');
-      return await handler(req, res);
+    if (normalized === '/api/v1/rooms') {
+      return await roomsIndexHandler(req, res);
     }
 
     // 6. Dynamic Rooms: /api/v1/rooms/:roomCode/...
-    const roomMatch = pathname.match(/^\/api\/v1\/rooms\/([^/]+)(\/(.*))?$/);
+    const roomMatch = normalized.match(/^\/api\/v1\/rooms\/([^/]+)(\/(.*))?$/);
     if (roomMatch) {
       const roomCode = roomMatch[1];
       const subPath = roomMatch[3] || 'index';
       req.query = req.query || {};
       req.query.roomCode = roomCode;
 
-      const roomRouteHandlers = {
-        'index': '../api/v1/rooms/[roomCode]/index.js',
-        'join': '../api/v1/rooms/[roomCode]/join.js',
-        'ready': '../api/v1/rooms/[roomCode]/ready.js',
-        'leave': '../api/v1/rooms/[roomCode]/leave.js',
-        'start': '../api/v1/rooms/[roomCode]/start.js',
-        'cancel': '../api/v1/rooms/[roomCode]/cancel.js',
-        'next-question': '../api/v1/rooms/[roomCode]/next-question.js',
-        'players': '../api/v1/rooms/[roomCode]/players.js',
-        'state': '../api/v1/rooms/[roomCode]/state.js',
-        'current-question': '../api/v1/rooms/[roomCode]/current-question.js',
-        'answers': '../api/v1/rooms/[roomCode]/answers.js',
-        'skip': '../api/v1/rooms/[roomCode]/skip.js',
-        'results': '../api/v1/rooms/[roomCode]/results.js',
-        'leaderboard': '../api/v1/rooms/[roomCode]/leaderboard.js',
-      };
-
-      if (roomRouteHandlers[subPath]) {
-        const { default: handler } = await import(roomRouteHandlers[subPath]);
+      const handler = roomHandlersMap[subPath];
+      if (handler) {
         return await handler(req, res);
       }
     }
 
     // 7. Leaderboards
-    if (pathname === '/api/v1/leaderboard/global' || pathname === '/api/v1/leaderboard/global/') {
-      const { default: handler } = await import('../api/v1/leaderboard/global.js');
-      return await handler(req, res);
+    if (normalized === '/api/v1/leaderboard/global') {
+      return await leaderboardGlobalHandler(req, res);
     }
-    if (pathname === '/api/v1/leaderboard/daily' || pathname === '/api/v1/leaderboard/daily/') {
-      const { default: handler } = await import('../api/v1/leaderboard/daily.js');
-      return await handler(req, res);
+    if (normalized === '/api/v1/leaderboard/daily') {
+      return await leaderboardDailyHandler(req, res);
     }
 
     // 404 nếu không khớp endpoint

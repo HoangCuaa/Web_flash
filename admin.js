@@ -47,6 +47,13 @@ window.handleAdminLogin = async function (e) {
             method: 'GET',
             headers: { 'x-admin-key': secret },
         });
+
+        const contentType = res.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+            const rawText = await res.text();
+            throw new Error(`Máy chủ phản hồi mã lỗi ${res.status}: ${rawText.slice(0, 80) || 'Không có nội dung'}`);
+        }
+
         const data = await res.json();
 
         if (res.ok && data.success) {

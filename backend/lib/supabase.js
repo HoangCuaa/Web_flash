@@ -5,9 +5,18 @@ import { createMockSupabaseClient } from './local-mock-db.js';
 let supabaseInstance = null;
 let hasLoggedMockNotice = false;
 
+function cleanSupabaseUrl(url) {
+  if (!url || typeof url !== 'string') return '';
+  let clean = url.trim();
+  // Tự động loại bỏ /rest/v1 hoặc dấu gạch chéo cuối nếu người dùng copy từ Swagger/REST API docs
+  clean = clean.replace(/\/rest\/v1\/?$/i, '');
+  clean = clean.replace(/\/+$/, '');
+  return clean;
+}
+
 function isValidRealSupabaseUrl(url) {
-  if (!url || typeof url !== 'string') return false;
-  const clean = url.trim();
+  const clean = cleanSupabaseUrl(url);
+  if (!clean) return false;
   // Kiểm tra nếu còn là placeholder hoặc chứa dấu ngoặc nhọn <...>
   if (clean.includes('<') || clean.includes('>') || clean.includes('project-id') || clean.includes('your-project')) {
     return false;
@@ -25,8 +34,9 @@ export function getSupabase() {
     return supabaseInstance;
   }
 
-  const supabaseUrl = process.env.SUPABASE_URL || '';
-  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+  const rawUrl = process.env.SUPABASE_URL || '';
+  const supabaseUrl = cleanSupabaseUrl(rawUrl);
+  const supabaseServiceRoleKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
 
   // Nếu đã cấu hình Supabase URL và Secret Key thật
   if (isValidRealSupabaseUrl(supabaseUrl) && supabaseServiceRoleKey && !supabaseServiceRoleKey.includes('<')) {
@@ -37,6 +47,7 @@ export function getSupabase() {
           autoRefreshToken: false,
         },
       });
+      console.log(`[SUPABASE] Đã kết nối thành công tới Database Supabase thật: ${supabaseUrl}`);
       return supabaseInstance;
     } catch (err) {
       console.warn('[SUPABASE] Lỗi khởi tạo client thật, chuyển sang Local Mock DB:', err.message);

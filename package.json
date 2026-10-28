@@ -1,0 +1,14 @@
+{
+  "name": "web-flash-quiz",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node backend/dev-server.js",
+    "test": "node --test backend/tests/**/*.test.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.1",
+    "dotenv": "^16.4.7"
+  }
+}

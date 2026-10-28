@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="vi" class="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trang Quản Trị Quiz — Neubrutalism Admin</title>
+
+    <!-- Google Fonts: Space Grotesk -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Space Grotesk"', 'sans-serif'],
+                    },
+                    colors: {
+                        darkBg: '#12161f',
+                        darkCard: '#1e2533',
+                        neoYellow: '#ffe600',
+                        neoPink: '#ff90e8',
+                        neoCyan: '#00f0ff',
+                        neoGreen: '#00e676',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Lucide Icons & SweetAlert2 -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Thư viện đọc file docx (JSZip) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+    <style>
+        * {
+            border-radius: 0 !important;
+        }
+
+        body {
+            background-color: #f7f9fc;
+            background-image: radial-gradient(#cbd5e1 1.5px, transparent 1.5px);
+            background-size: 24px 24px;
+            font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        .dark body {
+            background-color: #12161f;
+            background-image: radial-gradient(#2d3748 1.5px, transparent 1.5px);
+        }
+
+        .brutal-shadow {
+            box-shadow: 6px 6px 0px 0px rgba(0, 0, 0, 1);
+        }
+
+        .brutal-shadow-sm {
+            box-shadow: 4px 4px 0px 0px rgba(0, 0, 0, 1);
+        }
+
+        .dark .brutal-shadow {
+            box-shadow: 6px 6px 0px 0px rgba(0, 0, 0, 0.85);
+        }
+
+        .brutal-hover:hover:not(:disabled) {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0px 0px rgba(0, 0, 0, 1);
+        }
+
+        .brutal-active:active:not(:disabled) {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0px 0px rgba(0, 0, 0, 1);
+        }
+
+        .pop-in {
+            animation: popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes popIn {
+            0% {
+                transform: scale(0.96);
+                opacity: 0;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body class="text-gray-900 dark:text-gray-100 min-h-screen flex flex-col">
+
+    <!-- ════════════════════════════════════════
+         MÀN HÌNH ĐĂNG NHẬP ADMIN SECRET (KHI CHƯA XÁC THỰC)
+    ════════════════════════════════════════ -->
+    <div id="loginSection" class="flex-grow flex items-center justify-center p-4">
+        <div class="w-full max-w-md bg-white dark:bg-darkCard border-4 border-black brutal-shadow p-6 sm:p-8 pop-in">
+            <div class="inline-block bg-neoYellow border-2 border-black px-3 py-1 font-bold text-xs uppercase mb-3 tracking-wider">
+                Admin Area
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold uppercase mb-2">Đăng Nhập Quản Trị</h1>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-6 font-medium">
+                Vui lòng nhập <code class="bg-gray-200 dark:bg-gray-800 px-1 border border-black font-bold">ADMIN_SECRET</code> đã cấu hình để truy cập hệ thống quản lý.
+            </p>
+
+            <form id="loginForm" onsubmit="handleAdminLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block font-bold text-sm uppercase mb-1">Mã Bí Mật (ADMIN_SECRET):</label>
+                    <input type="password" id="adminSecretInput" required placeholder="Nhập khóa quản trị..."
+                        class="w-full p-3 border-2 border-black bg-white dark:bg-gray-900 font-bold focus:outline-none focus:bg-yellow-50 text-base" />
+                </div>
+                <div id="loginError" class="hidden text-red-600 font-bold text-sm bg-red-100 dark:bg-red-950 p-2 border-2 border-red-600"></div>
+
+                <div class="flex gap-3 pt-2">
+                    <button type="submit" id="loginBtn"
+                        class="flex-1 bg-neoGreen text-black font-extrabold border-2 border-black py-3 px-4 brutal-shadow-sm brutal-hover brutal-active uppercase tracking-wider text-base">
+                        Xác Thực ▶
+                    </button>
+                    <a href="index.html"
+                        class="bg-gray-200 text-black font-bold border-2 border-black py-3 px-4 brutal-shadow-sm brutal-hover brutal-active uppercase text-sm flex items-center">
+                        Về Quiz
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ════════════════════════════════════════
+         DASHBOARD QUẢN TRỊ (HIỂN THỊ KHI ĐÃ ĐĂNG NHẬP)
+    ════════════════════════════════════════ -->
+    <div id="adminDashboard" class="hidden flex-grow flex flex-col">
+        <!-- Top Navbar -->
+        <header class="bg-white dark:bg-darkCard border-b-4 border-black px-4 sm:px-8 py-4 sticky top-0 z-30">
+            <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="bg-neoYellow border-2 border-black px-3 py-1 font-black text-lg uppercase tracking-wider brutal-shadow-sm">
+                        ⚡ Quiz Admin
+                    </div>
+                    <span id="adminStatusBadge" class="hidden sm:inline bg-green-200 text-green-900 border border-black text-xs font-bold px-2 py-1">
+                        ● Đã kết nối
+                    </span>
+                </div>
+
+                <div class="flex items-center gap-2 sm:gap-4">
+                    <a href="index.html"
+                        class="bg-neoCyan text-black font-bold border-2 border-black px-3 py-1.5 brutal-shadow-sm brutal-hover brutal-active text-xs sm:text-sm uppercase flex items-center gap-1">
+                        🎮 Sang Trang Quiz
+                    </a>
+                    <button onclick="toggleDarkMode()"
+                        class="bg-white dark:bg-gray-800 border-2 border-black px-2 sm:px-3 py-1.5 font-bold brutal-shadow-sm brutal-hover brutal-active text-sm">
+                        🌓
+                    </button>
+                    <button onclick="handleAdminLogout()"
+                        class="bg-red-400 text-black font-bold border-2 border-black px-3 py-1.5 brutal-shadow-sm brutal-hover brutal-active text-xs sm:text-sm uppercase">
+                        Đăng Xuất 🚪
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <div class="bg-gray-100 dark:bg-gray-900 border-b-2 border-black px-4 sm:px-8">
+            <div class="max-w-7xl mx-auto flex overflow-x-auto gap-2 py-2">
+                <button onclick="switchTab('quizzes')" id="tabBtn-quizzes"
+                    class="tab-btn bg-neoYellow text-black font-bold border-2 border-black px-4 py-2 brutal-shadow-sm brutal-hover text-sm uppercase whitespace-nowrap">
+                    📚 Quản Lý Quiz
+                </button>
+                <button onclick="switchTab('create')" id="tabBtn-create"
+                    class="tab-btn bg-white dark:bg-darkCard text-black dark:text-white font-bold border-2 border-black px-4 py-2 brutal-shadow-sm brutal-hover text-sm uppercase whitespace-nowrap">
+                    ➕ Tạo Quiz Mới
+                </button>
+                <button onclick="switchTab('import')" id="tabBtn-import"
+                    class="tab-btn bg-white dark:bg-darkCard text-black dark:text-white font-bold border-2 border-black px-4 py-2 brutal-shadow-sm brutal-hover text-sm uppercase whitespace-nowrap">
+                    📄 Import (.docx / .json)
+                </button>
+                <button onclick="switchTab('leaderboard')" id="tabBtn-leaderboard"
+                    class="tab-btn bg-white dark:bg-darkCard text-black dark:text-white font-bold border-2 border-black px-4 py-2 brutal-shadow-sm brutal-hover text-sm uppercase whitespace-nowrap">
+                    🏆 Bảng Xếp Hạng
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Body Content -->
+        <main class="max-w-7xl mx-auto w-full p-4 sm:p-8 flex-grow">
+
+            <!-- Thống kê đầu trang (Metrics Grid) -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div class="bg-white dark:bg-darkCard border-3 border-black p-4 brutal-shadow-sm">
+                    <p class="text-xs uppercase font-extrabold text-gray-500 dark:text-gray-400">Bộ Quiz</p>
+                    <p id="statTotalQuizzes" class="text-3xl font-black mt-1">0</p>
+                </div>
+                <div class="bg-white dark:bg-darkCard border-3 border-black p-4 brutal-shadow-sm">
+                    <p class="text-xs uppercase font-extrabold text-gray-500 dark:text-gray-400">Tổng Câu Hỏi</p>
+                    <p id="statTotalQuestions" class="text-3xl font-black mt-1 text-blue-600 dark:text-blue-400">0</p>
+                </div>
+                <div class="bg-white dark:bg-darkCard border-3 border-black p-4 brutal-shadow-sm">
+                    <p class="text-xs uppercase font-extrabold text-gray-500 dark:text-gray-400">Số Phòng Đã Tạo</p>
+                    <p id="statTotalRooms" class="text-3xl font-black mt-1 text-purple-600 dark:text-purple-400">0</p>
+                </div>
+                <div class="bg-white dark:bg-darkCard border-3 border-black p-4 brutal-shadow-sm">
+                    <p class="text-xs uppercase font-extrabold text-gray-500 dark:text-gray-400">Lượt Thi Hoàn Thành</p>
+                    <p id="statTotalAttempts" class="text-3xl font-black mt-1 text-green-600 dark:text-green-400">0</p>
+                </div>
+            </div>
+
+            <!-- TAB 1: DANH SÁCH BỘ QUIZ -->
+            <section id="tabContent-quizzes" class="tab-pane space-y-6">
+                <div class="flex flex-wrap justify-between items-center gap-4">
+                    <h2 class="text-2xl font-black uppercase">Danh Sách Bộ Câu Hỏi</h2>
+                    <button onclick="loadQuizzesList()"
+                        class="bg-white dark:bg-gray-800 border-2 border-black px-4 py-2 font-bold brutal-shadow-sm brutal-hover brutal-active text-sm">
+                        🔄 Làm Mới
+                    </button>
+                </div>
+
+                <div id="quizzesTableContainer" class="bg-white dark:bg-darkCard border-4 border-black brutal-shadow overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-neoYellow text-black border-b-2 border-black font-black uppercase text-xs sm:text-sm">
+                                <th class="p-3 sm:p-4">Tiêu đề Quiz</th>
+                                <th class="p-3 sm:p-4">Danh mục</th>
+                                <th class="p-3 sm:p-4">Số câu</th>
+                                <th class="p-3 sm:p-4">Thời gian / câu</th>
+                                <th class="p-3 sm:p-4">Ngày tạo</th>
+                                <th class="p-3 sm:p-4 text-center">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="quizzesTableBody" class="divide-y-2 divide-black text-sm font-medium">
+                            <tr>
+                                <td colspan="6" class="p-8 text-center text-gray-500">Đang tải danh sách câu hỏi...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Modal Chi Tiết Quiz (Xem câu hỏi và đáp án đúng) -->
+                <div id="quizDetailModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                    <div class="bg-white dark:bg-darkCard border-4 border-black brutal-shadow max-w-3xl w-full max-h-[85vh] flex flex-col pop-in">
+                        <div class="bg-neoCyan text-black border-b-2 border-black p-4 flex justify-between items-center">
+                            <h3 id="modalQuizTitle" class="font-extrabold text-lg uppercase truncate">Chi tiết Quiz</h3>
+                            <button onclick="closeQuizDetailModal()" class="font-black text-xl px-2 hover:bg-black hover:text-white">✕</button>
+                        </div>
+                        <div id="modalQuizQuestions" class="p-4 sm:p-6 overflow-y-auto space-y-4 flex-grow">
+                            <!-- Nội dung câu hỏi và đáp án render động -->
+                        </div>
+                        <div class="border-t-2 border-black p-3 bg-gray-100 dark:bg-gray-900 flex justify-end">
+                            <button onclick="closeQuizDetailModal()" class="bg-black text-white font-bold px-6 py-2 brutal-shadow-sm brutal-hover uppercase text-sm">
+                                Đóng
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: TẠO BỘ QUIZ MỚI -->
+            <section id="tabContent-create" class="tab-pane hidden space-y-6">
+                <div class="bg-white dark:bg-darkCard border-4 border-black brutal-shadow p-6 sm:p-8">
+                    <h2 class="text-2xl font-black uppercase mb-4">Tạo Bộ Quiz Mới</h2>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-6 font-medium">
+                        Điền thông tin bộ quiz và danh sách câu hỏi, sau đó bấm Lưu để đưa vào hệ thống.
+                    </p>
+
+                    <form id="createQuizForm" onsubmit="handleCreateQuiz(event)" class="space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="md:col-span-2">
+                                <label class="block font-bold text-sm uppercase mb-1">Tiêu Đề Quiz *:</label>
+                                <input type="text" id="newQuizTitle" required placeholder="VD: Lập Trình Web Cơ Bản"
+                                    class="w-full p-3 border-2 border-black bg-white dark:bg-gray-900 font-bold focus:outline-none focus:bg-yellow-50 text-base" />
+                            </div>
+                            <div>
+                                <label class="block font-bold text-sm uppercase mb-1">Danh Mục:</label>
+                                <input type="text" id="newQuizCategory" placeholder="Công nghệ, Khoa học..."
+                                    class="w-full p-3 border-2 border-black bg-white dark:bg-gray-900 font-bold focus:outline-none focus:bg-yellow-50 text-base" />
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block font-bold text-sm uppercase mb-1">Thời gian mỗi câu (giây):</label>
+                                <input type="number" id="newQuizTime" value="20" min="5" max="120"
+                                    class="w-full p-3 border-2 border-black bg-white dark:bg-gray-900 font-bold focus:outline-none text-base" />
+                            </div>
+                            <div>
+                                <label class="block font-bold text-sm uppercase mb-1">Mô tả tóm tắt:</label>
+                                <input type="text" id="newQuizDescription" placeholder="Bộ câu hỏi ôn tập tổng hợp..."
+                                    class="w-full p-3 border-2 border-black bg-white dark:bg-gray-900 font-bold focus:outline-none text-base" />
+                            </div>
+                        </div>
+
+                        <!-- Danh sách câu hỏi động -->
+                        <div class="border-t-2 border-black pt-6">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-lg font-black uppercase">Danh Sách Câu Hỏi (<span id="questionCountBadge">1</span>)</h3>
+                                <button type="button" onclick="addNewQuestionBlock()"
+                                    class="bg-neoYellow text-black font-black border-2 border-black px-4 py-2 brutal-shadow-sm brutal-hover brutal-active text-sm uppercase">
+                                    + Thêm Câu Hỏi
+                                </button>
+                            </div>
+
+                            <div id="questionsBuilderContainer" class="space-y-6">
+                                <!-- Các block câu hỏi sẽ render vào đây -->
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end gap-4 pt-4 border-t-2 border-black">
+                            <button type="submit" id="saveQuizBtn"
+                                class="bg-neoGreen text-black font-black border-3 border-black py-4 px-8 brutal-shadow brutal-hover brutal-active uppercase tracking-wider text-lg">
+                                💾 Lưu Bộ Quiz Lên Database
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <!-- TAB 3: IMPORT TỪ FILE WORD .DOCX HOẶC JSON -->
+            <section id="tabContent-import" class="tab-pane hidden space-y-6">
+                <div class="bg-white dark:bg-darkCard border-4 border-black brutal-shadow p-6 sm:p-8">
+                    <h2 class="text-2xl font-black uppercase mb-2">Import Câu Hỏi Hàng Loạt</h2>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-6 font-medium">
+                        Bạn có thể tải trực tiếp file Word (.docx) chứa câu hỏi đã tô đỏ đáp án đúng hoặc file JSON/JS để tự động nạp vào database.
+                    </p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                        <!-- Box chọn file Word -->
+                        <div class="border-2 border-dashed border-black p-6 bg-yellow-50 dark:bg-gray-900 flex flex-col items-center text-center">
+                            <span class="text-4xl mb-2">📄</span>
+                            <h4 class="font-bold text-lg mb-1">File Word (.docx)</h4>
+                            <p class="text-xs text-gray-600 dark:text-gray-400 mb-4">
+                                Nhận diện tự động câu hỏi, các đáp án A/B/C/D và chữ tô màu đỏ làm đáp án đúng.
+                            </p>
+                            <label class="bg-neoYellow text-black font-extrabold border-2 border-black px-4 py-2.5 brutal-shadow-sm brutal-hover cursor-pointer uppercase text-sm">
+                                Chọn File Word (.docx)
+                                <input type="file" id="docxImportInput" accept=".docx" class="hidden" onchange="handleAdminDocxUpload(this)" />
+                            </label>
+                        </div>
+
+                        <!-- Box chọn file JSON -->
+                        <div class="border-2 border-dashed border-black p-6 bg-blue-50 dark:bg-gray-900 flex flex-col items-center text-center">
+                            <span class="text-4xl mb-2">📦</span>
+                            <h4 class="font-bold text-lg mb-1">File JSON / JS</h4>
+                            <p class="text-xs text-gray-600 dark:text-gray-400 mb-4">
+                                Chứa mảng dữ liệu định dạng chuẩn: <code>[{ question, options, correct }]</code>.
+                            </p>
+                            <label class="bg-neoCyan text-black font-extrabold border-2 border-black px-4 py-2.5 brutal-shadow-sm brutal-hover cursor-pointer uppercase text-sm">
+                                Chọn File JSON / JS
+                                <input type="file" id="jsonImportInput" accept=".json,.js" class="hidden" onchange="handleAdminJsonUpload(this)" />
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Khu vực Preview câu hỏi sau khi đọc file -->
+                    <div id="importPreviewArea" class="hidden space-y-4">
+                        <div class="bg-neoPink text-black p-4 border-2 border-black font-bold flex flex-wrap justify-between items-center gap-2">
+                            <span>✅ Đã nhận diện được <span id="importQuestionCount" class="underline text-lg font-black">0</span> câu hỏi từ file</span>
+                            <button onclick="saveImportedQuizToDB()" id="confirmImportBtn"
+                                class="bg-neoGreen text-black font-extrabold border-2 border-black px-6 py-2 brutal-shadow-sm brutal-hover uppercase">
+                                🚀 Xác Nhận Lưu Vào Database
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block font-bold text-sm uppercase mb-1">Tên bộ Quiz:</label>
+                                <input type="text" id="importQuizTitle" class="w-full p-2.5 border-2 border-black font-bold bg-white dark:bg-gray-900" />
+                            </div>
+                            <div>
+                                <label class="block font-bold text-sm uppercase mb-1">Danh mục:</label>
+                                <input type="text" id="importQuizCategory" value="Imported" class="w-full p-2.5 border-2 border-black font-bold bg-white dark:bg-gray-900" />
+                            </div>
+                        </div>
+
+                        <div id="importQuestionsPreviewList" class="max-h-96 overflow-y-auto space-y-3 border-2 border-black p-4 bg-gray-50 dark:bg-gray-900">
+                            <!-- Danh sách câu hỏi render xem trước -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 4: BẢNG XẾP HẠNG TOÀN CẦU -->
+            <section id="tabContent-leaderboard" class="tab-pane hidden space-y-6">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-black uppercase">Bảng Xếp Hạng Toàn Hệ Thống</h2>
+                    <button onclick="loadAdminLeaderboard()"
+                        class="bg-white dark:bg-gray-800 border-2 border-black px-4 py-2 font-bold brutal-shadow-sm brutal-hover brutal-active text-sm">
+                        🔄 Cập Nhật
+                    </button>
+                </div>
+
+                <div class="bg-white dark:bg-darkCard border-4 border-black brutal-shadow overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-neoGreen text-black border-b-2 border-black font-black uppercase text-xs sm:text-sm">
+                                <th class="p-3 sm:p-4 text-center">Hạng</th>
+                                <th class="p-3 sm:p-4">Người chơi</th>
+                                <th class="p-3 sm:p-4">Điểm số</th>
+                                <th class="p-3 sm:p-4">Số câu đúng</th>
+                                <th class="p-3 sm:p-4">Thời điểm</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboardTableBody" class="divide-y-2 divide-black text-sm font-medium">
+                            <tr>
+                                <td colspan="5" class="p-8 text-center text-gray-500">Đang tải bảng xếp hạng...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Script điều khiển Logic Admin -->
+    <script src="admin.js"></script>
+</body>
+
+</html>
